@@ -97,6 +97,12 @@ func preUpdateHookTrampoline(handle unsafe.Pointer, dbHandle uintptr, op int, db
 	callback(data)
 }
 
+//export walHookTrampoline
+func walHookTrampoline(handle unsafe.Pointer, db *C.char, table *C.char, pages int) int {
+	callback := lookupHandle(handle).(func(string, string, int) int)
+	return callback(C.GoString(db), C.GoString(table), pages)
+}
+
 // Use handles to avoid passing Go pointers to C.
 type handleVal struct {
 	db  *SQLiteConn
@@ -360,11 +366,11 @@ func callbackRetGeneric(ctx *C.sqlite3_context, v reflect.Value) error {
 	}
 
 	cb, err := callbackRet(v.Elem().Type())
-        if err != nil {
-                return err
-        }
+	if err != nil {
+		return err
+	}
 
-        return cb(ctx, v.Elem())
+	return cb(ctx, v.Elem())
 }
 
 func callbackRet(typ reflect.Type) (callbackRetConverter, error) {
